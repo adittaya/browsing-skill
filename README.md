@@ -4,39 +4,30 @@ Enterprise-grade browser automation for AI agents. Starts a full graphical brows
 environment (Xvfb + VNC + fluxbox) that any AI can control with simple bash commands
 and pixel-based screen analysis.
 
-## 🚀 Quick Start
+**Key principle: the browser starts once and stays open.** Like a real human, you
+navigate by typing URLs (Ctrl+L), not by killing and reopening the browser.
+
+## Quick Start
 
 ```bash
 git clone https://github.com/adittaya/browsing-skill.git
 cd browsing-skill
 bash setup/install.sh    # Install dependencies (one-time)
-bash setup/start.sh      # Start browser environment
+bash setup/start.sh      # Start browser environment (opens Google)
 bash scripts/status.sh   # Verify everything is running
 ```
 
-## 🎯 What It Does
-
-| Capability | How |
-|---|---|
-| **Start a browser** | Xvfb virtual framebuffer + fluxbox + x11vnc + surf/qutebrowser |
-| **See the screen** | Screenshot analysis detects modals, buttons, links, layout |
-| **Click elements** | By coordinates or by finding buttons automatically |
-| **Scroll pages** | Step scroll, page scroll, jump to top/bottom |
-| **Type text** | Type into focused input fields, press keyboard keys |
-| **Handle modal popups** | Detect and dismiss overlay modals automatically |
-| **VNC monitoring** | Watch everything in real-time via any VNC client |
-| **Structured output** | All analysis returns JSON for programmatic use |
-
-## 🖥️ Architecture
+## How It Works
 
 ```
 ┌──────────────────────────────────────────────┐
 │  AI Agent                                     │
-│  (reads this prompt, issues commands)         │
+│  "open this URL, click Continue, scroll down" │
 ├──────────────────────────────────────────────┤
-│  bash scripts/click.sh, scroll.sh, type.sh    │
-│  python3 lib/screen_analyzer.py               │
-│  python3 lib/element_locator.py               │
+│  bash scripts/browser.sh open <url>           │
+│  bash scripts/click.sh --text continue        │
+│  bash scripts/scroll.sh down 5                │
+│  python3 lib/screen_analyzer.py --capture     │
 ├──────────────────────────────────────────────┤
 │  xdotool → X11 → Xvfb (display :99)          │
 │  fluxbox (window manager)                     │
@@ -45,16 +36,16 @@ bash scripts/status.sh   # Verify everything is running
 └──────────────────────────────────────────────┘
 ```
 
-## 📋 Requirements
+The browser opens once on Google homepage. To go to any URL:
 
-- **OS**: Linux (Ubuntu/Debian, Fedora, Arch tested)
-- **Packages**: Xvfb, x11vnc, fluxbox, xdotool, wmctrl, Python 3, Pillow
-- **Browser**: surf (default), qutebrowser, or links2
-- **Architecture**: x86_64 or arm64/aarch64
+```bash
+bash scripts/browser.sh open "https://example.com"
+```
 
-## 🧠 How Screen Analysis Works
+This simulates Ctrl+L → type URL → Enter. The same browser window is reused
+for the entire session — no killing, no restarting, just like a real person.
 
-The skill uses **color-based pixel analysis** (no OCR needed) to detect:
+## What It Detects (Screen Analysis)
 
 | Element | Color Signature | Example |
 |---|---|---|
@@ -63,26 +54,29 @@ The skill uses **color-based pixel analysis** (no OCR needed) to detect:
 | **Link** | R<80, G=80-180, B>120 | Blue hyperlinks |
 | **Footer** | R<30, G<30, B<30 | Dark navigation bar |
 
-This approach works on any website without needing DOM access or OCR.
+No OCR or DOM access needed — works on any website by analyzing pixel colors.
 
-## 📖 Full Command Reference
+## Command Reference
 
-### Environment
+### Environment (one-time setup)
 
 | Command | Purpose |
 |---|---|
 | `bash setup/start.sh [url]` | Start Xvfb + fluxbox + x11vnc + browser |
-| `bash setup/stop.sh` | Stop everything |
+| `bash setup/stop.sh` | Destroy everything (rarely needed) |
 | `bash scripts/status.sh` | Check environment status |
 
-### Navigation
+### Navigation (persistent browser, never kill/reopen)
 
 | Command | Purpose |
 |---|---|
-| `bash scripts/browser.sh open <url>` | Open URL in browser |
-| `bash scripts/browser.sh refresh` | Refresh page |
-| `bash scripts/browser.sh back` | Go back |
-| `bash scripts/browser.sh forward` | Go forward |
+| `bash scripts/browser.sh open <url>` | Navigate to URL (Ctrl+L → type → Enter) |
+| `bash scripts/browser.sh new-tab <url>` | Open in new tab (Ctrl+T) |
+| `bash scripts/browser.sh refresh` | Reload page (Ctrl+R) |
+| `bash scripts/browser.sh back` | Go back (Alt+Left) |
+| `bash scripts/browser.sh forward` | Go forward (Alt+Right) |
+| `bash scripts/browser.sh close-tab` | Close current tab (Ctrl+W) |
+| `bash scripts/browser.sh focus` | Bring window to front |
 
 ### Interaction
 
@@ -92,6 +86,7 @@ This approach works on any website without needing DOM access or OCR.
 | `bash scripts/click.sh --text <hint>` | Find button by hint and click |
 | `bash scripts/click.sh --element modal` | Dismiss modal overlay |
 | `bash scripts/scroll.sh down/up <n>` | Scroll N steps |
+| `bash scripts/scroll.sh page-down` | One page down |
 | `bash scripts/scroll.sh bottom` | Jump to bottom |
 | `bash scripts/type.sh "text"` | Type text |
 | `bash scripts/type.sh --key Return` | Press a key |
@@ -101,26 +96,41 @@ This approach works on any website without needing DOM access or OCR.
 | Command | Purpose |
 |---|---|
 | `bash scripts/screenshot.sh` | Take screenshot |
-| `bash scripts/screenshot.sh /tmp/s.png --analyze` | Screenshot + analyze text |
+| `bash scripts/screenshot.sh --analyze` | Screenshot + analyze |
 | `python3 lib/screen_analyzer.py --capture` | Full screen analysis |
 | `python3 lib/screen_analyzer.py --capture --json` | Analysis as JSON |
-| `python3 lib/element_locator.py --find continue` | Find element and click |
+| `python3 lib/element_locator.py --find continue` | Find element by hint |
 
-## 🤖 Agent Integration
+## Typical AI Session
+
+```bash
+# Step 1: Start once
+bash setup/start.sh
+
+# Step 2: Navigate
+bash scripts/browser.sh open "https://vplink.in/UbpV2D"
+sleep 4
+
+# Step 3: Analyze
+python3 lib/screen_analyzer.py --capture
+
+# Step 4: Click
+bash scripts/click.sh --text continue
+sleep 3
+
+# Step 5: Verify
+bash scripts/screenshot.sh --analyze
+
+# Step 6: Next task (same browser, no restart)
+bash scripts/browser.sh open "https://other-site.com"
+```
+
+## Agent Integration
 
 Give your AI agent the prompt in **[AGENTS.md](AGENTS.md)** to enable full
-browser automation capability. The agent will:
+browser automation capability.
 
-1. Start the browser environment
-2. Navigate to any URL
-3. Analyze screenshots to understand the page
-4. Click buttons, fill forms, scroll pages
-5. Handle modals and popups automatically
-6. Report results back to you
-
-## 🔧 Configuration
-
-Set these environment variables:
+## Configuration
 
 ```bash
 export DISPLAY=:99           # X display (default: :99)
@@ -129,16 +139,13 @@ export BROWSER=surf          # Browser: surf, qutebrowser, links2
 export SCREEN_SIZE="1280x720x24"  # Screen resolution
 ```
 
-## 🐳 Docker
+## Requirements
 
-```dockerfile
-FROM ubuntu:24.04
-RUN apt-get update && apt-get install -y xvfb x11vnc fluxbox xdotool surf python3-pil
-COPY browsing-skill /opt/browsing-skill
-CMD ["bash", "/opt/browsing-skill/setup/start.sh"]
-```
+- **OS**: Linux (Ubuntu/Debian, Fedora, Arch tested)
+- **Packages**: Xvfb, x11vnc, fluxbox, xdotool, Python 3, Pillow
+- **Browser**: surf (default), qutebrowser, or links2
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 browsing-skill/
@@ -147,10 +154,10 @@ browsing-skill/
 ├── README.md                # This file
 ├── setup/
 │   ├── install.sh           # One-time dependency installer
-│   ├── start.sh             # Start environment
-│   └── stop.sh              # Stop environment
+│   ├── start.sh             # Start environment (persistent session)
+│   └── stop.sh              # Destroy everything
 ├── scripts/
-│   ├── browser.sh           # Browser navigation
+│   ├── browser.sh           # Browser navigation (never kill/reopen)
 │   ├── click.sh             # Click elements
 │   ├── scroll.sh            # Scroll pages
 │   ├── type.sh              # Type text
@@ -164,6 +171,6 @@ browsing-skill/
     └── test_browse.sh       # Browsing workflow tests
 ```
 
-## 📄 License
+## License
 
 MIT

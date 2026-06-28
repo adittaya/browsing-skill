@@ -4,44 +4,38 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 DISPLAY="${DISPLAY:-:99}"
+BROWSER="${BROWSER:-surf}"
+DATA_DIR="${DATA_DIR:-/tmp/browsing-skill}"
+SESSION_FILE="$DATA_DIR/session"
 
 usage() {
     echo "Usage: browser.sh <command> [args]"
     echo ""
     echo "Commands:"
-    echo "  open <url>         Open URL in browser"
-    echo "  refresh            Refresh current page"
-    echo "  back               Go back"
-    echo "  forward            Go forward"
-    echo "  close              Close browser"
-    echo "  status             Check browser status"
+    echo "  open <url>       Navigate to URL (reuses existing browser tab)"
+    echo "  new-tab <url>    Open URL in a new tab"
+    echo "  refresh          Reload current page"
+    echo "  back             Go back in history"
+    echo "  forward          Go forward in history"
+    echo "  close-tab        Close current tab"
+    echo "  status           Check browser state"
+    echo "  focus            Bring browser window to front"
     echo ""
-    echo "Environment:"
-    echo "  DISPLAY            X display (default: :99)"
-    echo "  BROWSER            Browser to use (default: surf)"
+    echo "The browser is persistent - never killed or reopened."
+    echo "Use 'open' to navigate, 'new-tab' for additional tabs."
     exit 1
 }
 
-find_browser_window() {
-    local name="${1:-}"
-    local win
-    if [ -n "$name" ]; then
-        win=$(DISPLAY="$DISPLAY" xdotool search --name "$name" 2>/dev/null | head -1 || true)
-    else
-        # Try common browser window names
-        for n in "surf" "qutebrowser" "Links" "Mozilla Firefox" "Chromium" "Navigator"; do
-            win=$(DISPLAY="$DISPLAY" xdotool search --name "$n" 2>/dev/null | head -1 || true)
-            [ -n "$win" ] && break
-        done
-    fi
-    echo "$win"
+find_window() {
+    DISPLAY="$DISPLAY" xdotool search --name ".+" 2>/dev/null | head -1 || true
 }
 
 ensure_window() {
     local win
-    win=$(find_browser_window)
+    win=$(find_window)
     if [ -z "$win" ]; then
-        echo "No browser window found. Start browser first."
+        echo "[browser] No window found. Is the browser running?"
+        echo "[browser] Run: bash setup/start.sh"
         exit 1
     fi
     echo "$win"
@@ -54,70 +48,78 @@ case "${1:-}" in
             echo "Usage: browser.sh open <url>"
             exit 1
         fi
-        # Open in existing browser or start new one
-        WIN=$(find_browser_window)
-        if [ -n "$WIN" ]; then
-            DISPLAY="$DISPLAY" xdotool windowactivate "$WIN"
-            sleep 0.5
-            # Use Ctrl+L to focus URL bar, then type URL
-            DISPLAY="$DISPLAY" xdotool key "ctrl+l"
-            sleep 0.3
-            DISPLAY="$DISPLAY" xdotool type --delay 10 "$URL"
-            sleep 0.3
-            DISPLAY="$DISPLAY" xdotool key Return
-            echo "Opened $URL in existing browser"
-        else
-            # Start new browser
-            BROWSER="${BROWSER:-surf}"
-            case "$BROWSER" in
-                surf) DISPLAY="$DISPLAY" LIBGL_ALWAYS_SOFTWARE=1 surf "$URL" &>/tmp/browser.log & ;;
-                qutebrowser) DISPLAY="$DISPLAY" qutebrowser "$URL" &>/tmp/browser.log & ;;
-                links2) DISPLAY="$DISPLAY" links2 -g "$URL" &>/tmp/browser.log & ;;
-                *)
-                    echo "Unknown browser: $BROWSER"
-                    exit 1
-                    ;;
-            esac
-            echo "Started $BROWSER with $URL (PID: $!)"
-        fi
+        echo "[browser] Navigating to: $URL"
+        WIN=$(ensure_window)
+        DISPLAY="$DISPLAY" xdotool windowactivate "$WIN" 2>/dev/null || true
+        sleep 0.3
+        # Focus URL bar (Ctrl+L works in surf, qutebrowser, firefox, chromium)
+        DISPLAY="$DISPLAY" xdotool key "ctrl+l" 2>/dev/null || true
+        sleep 0.3
+        DISPLAY="$DISPLAY" xdotool type --delay 8 "$URL" 2>/dev/null || true
+        sleep 0.3
+        DISPLAY="$DISPLAY" xdotool key Return 2>/dev/null || true
+        echo "[browser] Done"
         ;;
 
-    refresh)
+    new-tab)
+        URL="${2:-https://www.google.com}"
+        echo "[browser] Opening new tab: $URL"
         WIN=$(ensure_window)
-        DISPLAY="$DISPLAY" xdotool windowactivate "$WIN"
-        DISPLAY="$DISPLAY" xdotool key "ctrl+r"
-        echo "Page refreshed"
+        DISPLAY="$DISPLAY" xdotool windowactivate "$WIN" 2>/dev/null || true
+        sleep 0.2
+        # Ctrl+T opens new tab (works in most browsers)
+        DISPLAY="$DISPLAY" xdotool key "ctrl+t" 2>/dev/null || true
+        sleep 0.5
+        DISPLAY="$DISPLAY" xdotool type --delay 8 "$URL" 2>/dev/null || true
+        sleep 0.3
+        DISPLAY="$DISPLAY" xdotool key Return 2>/dev/null || true
+        echo "[browser] New tab opened"
+        ;;
+
+    refresh|reload)
+        WIN=$(ensure_window)
+        DISPLAY="$DISPLAY" xdotool windowactivate "$WIN" 2>/dev/null || true
+        DISPLAY="$DISPLAY" xdotool key "ctrl+r" 2>/dev/null || true
+        echo "[browser] Page refreshed"
         ;;
 
     back)
         WIN=$(ensure_window)
-        DISPLAY="$DISPLAY" xdotool windowactivate "$WIN"
-        DISPLAY="$DISPLAY" xdotool key "alt+Left"
-        echo "Navigated back"
+        DISPLAY="$DISPLAY" xdotool windowactivate "$WIN" 2>/dev/null || true
+        DISPLAY="$DISPLAY" xdotool key "alt+Left" 2>/dev/null || true
+        echo "[browser] Navigated back"
         ;;
 
     forward)
         WIN=$(ensure_window)
-        DISPLAY="$DISPLAY" xdotool windowactivate "$WIN"
-        DISPLAY="$DISPLAY" xdotool key "alt+Right"
-        echo "Navigated forward"
+        DISPLAY="$DISPLAY" xdotool windowactivate "$WIN" 2>/dev/null || true
+        DISPLAY="$DISPLAY" xdotool key "alt+Right" 2>/dev/null || true
+        echo "[browser] Navigated forward"
         ;;
 
-    close)
-        pkill -f "surf.*$DISPLAY" 2>/dev/null || true
-        pkill -f "qutebrowser.*$DISPLAY" 2>/dev/null || true
-        pkill -f "links2.*$DISPLAY" 2>/dev/null || true
-        echo "Browser closed"
+    close-tab)
+        WIN=$(ensure_window)
+        DISPLAY="$DISPLAY" xdotool windowactivate "$WIN" 2>/dev/null || true
+        DISPLAY="$DISPLAY" xdotool key "ctrl+w" 2>/dev/null || true
+        echo "[browser] Tab closed"
+        ;;
+
+    focus)
+        WIN=$(ensure_window)
+        DISPLAY="$DISPLAY" xdotool windowactivate "$WIN" 2>/dev/null || true
+        echo "[browser] Window focused"
         ;;
 
     status)
-        WIN=$(find_browser_window)
+        WIN=$(find_window)
         if [ -n "$WIN" ]; then
-            NAME=$(DISPLAY="$DISPLAY" xdotool getwindowname "$WIN" 2>/dev/null || echo "unknown")
-            echo "Browser running: $NAME (window: $WIN)"
-            DISPLAY="$DISPLAY" xdotool getwindowgeometry "$WIN" 2>/dev/null | head -2
+            NAME=$(DISPLAY="$DISPLAY" xdotool getwindowname "$WIN" 2>/dev/null || echo "(no title)")
+            echo "[browser] Running: $NAME"
+            echo "[browser] Window ID: $WIN"
+            DISPLAY="$DISPLAY" xdotool getwindowgeometry "$WIN" 2>/dev/null | tail -2
         else
-            echo "No browser window detected"
+            echo "[browser] No browser window"
+            echo "[browser] Check environment: bash setup/start.sh"
             exit 1
         fi
         ;;
