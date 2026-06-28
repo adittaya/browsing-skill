@@ -11,13 +11,16 @@ usage() {
     echo "       click.sh --element <element-type>"
     echo "       click.sh --analyze"
     echo ""
-    echo "Examples:"
-    echo "  click.sh 640 480           Click at coordinates"
-    echo "  click.sh --text continue   Find and click 'Continue' button"
-    echo "  click.sh --element modal   Find and click modal dismiss button"
-    echo "  click.sh --analyze         Analyze screen and show clickable areas"
+    echo "Buttons: 1=left (default), 2=middle, 3=right"
+    echo "         --double for double-click"
     echo ""
-    echo "Button: 1=left, 2=middle, 3=right (default: 1)"
+    echo "Examples:"
+    echo "  click.sh 640 480            Left click at coordinates"
+    echo "  click.sh 640 480 3          Right click"
+    echo "  click.sh 640 480 1 --double Double-left click"
+    echo "  click.sh --text continue    Find 'Continue' button and click"
+    echo "  click.sh --element modal    Dismiss modal overlay"
+    echo "  click.sh --analyze          Show what's clickable on screen"
     exit 1
 }
 
@@ -42,23 +45,27 @@ case "${1:-}" in
         python3 "$REPO_DIR/lib/screen_analyzer.py" --capture
         ;;
 
-    --json)
-        shift
-        if [ $# -ge 2 ]; then
-            python3 "$REPO_DIR/lib/element_locator.py" --click "$1" "$2" --json
-        else
-            python3 "$REPO_DIR/lib/element_locator.py" --find "${1:-continue}" --json
-        fi
-        ;;
-
     *)
         X="${1:-}"
         Y="${2:-}"
         BTN="${3:-1}"
+        DOUBLE="${4:-}"
+
         if [ -z "$X" ] || [ -z "$Y" ]; then
             usage
         fi
-        DISPLAY="$DISPLAY" xdotool mousemove "$X" "$Y" click "$BTN"
-        echo "Clicked ($X, $Y) with button $BTN"
+
+        DISPLAY="$DISPLAY" xdotool mousemove "$X" "$Y"
+
+        if [ "$DOUBLE" = "--double" ] || [ "$DOUBLE" = "-d" ]; then
+            DISPLAY="$DISPLAY" xdotool click --repeat 2 "$BTN"
+            echo "Double-clicked ($X, $Y) button $BTN"
+        else
+            DISPLAY="$DISPLAY" xdotool click "$BTN"
+            BTN_NAME="left"
+            [ "$BTN" = "2" ] && BTN_NAME="middle"
+            [ "$BTN" = "3" ] && BTN_NAME="right"
+            echo "Clicked ($X, $Y) $BTN_NAME button"
+        fi
         ;;
 esac

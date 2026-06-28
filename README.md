@@ -1,11 +1,11 @@
-# Browser Automation Skill
+# Desktop Environment Skill
 
-Enterprise-grade browser automation for AI agents. Starts a full graphical browser
-environment (Xvfb + VNC + fluxbox) that any AI can control with simple bash commands
-and pixel-based screen analysis.
+A full graphical Linux desktop for AI agents. Xvfb + fluxbox + VNC + browser
+— see the screen, click, type, scroll, navigate the web. Do anything a human
+can do on a computer.
 
-**Key principle: the browser starts once and stays open.** Like a real human, you
-navigate by typing URLs (Ctrl+L), not by killing and reopening the browser.
+**Primary focus is web browsing, but you can handle any desktop task.**
+Every action is variable and human-like — not rigid scripts.
 
 ## Quick Start
 
@@ -13,162 +13,165 @@ navigate by typing URLs (Ctrl+L), not by killing and reopening the browser.
 git clone https://github.com/adittaya/browsing-skill.git
 cd browsing-skill
 bash setup/install.sh    # Install dependencies (one-time)
-bash setup/start.sh      # Start browser environment (opens Google)
+bash setup/start.sh      # Start desktop (opens Google)
 bash scripts/status.sh   # Verify everything is running
 ```
 
-## How It Works
+## What It Is
 
 ```
 ┌──────────────────────────────────────────────┐
 │  AI Agent                                     │
-│  "open this URL, click Continue, scroll down" │
+│  looks at screen → decides → acts → repeats   │
 ├──────────────────────────────────────────────┤
-│  bash scripts/browser.sh open <url>           │
-│  bash scripts/click.sh --text continue        │
-│  bash scripts/scroll.sh down 5                │
-│  python3 lib/screen_analyzer.py --capture     │
+│  bash scripts/click.sh  / scroll.sh / type.sh │
+│  python3 lib/screen_analyzer.py               │
+│  python3 lib/element_locator.py               │
 ├──────────────────────────────────────────────┤
 │  xdotool → X11 → Xvfb (display :99)          │
 │  fluxbox (window manager)                     │
 │  surf/qutebrowser (WebKit browser)            │
-│  x11vnc (port 5900 - watch in real-time)      │
+│  x11vnc (port 5900 - watch live)             │
 └──────────────────────────────────────────────┘
 ```
 
-The browser opens once on Google homepage. To go to any URL:
+The desktop starts once and stays running. The browser opens on Google.
+Navigate by Ctrl+L → type URL → Enter — like a real person.
 
-```bash
-bash scripts/browser.sh open "https://example.com"
-```
+**No killing, no restarting.** Just navigate to the next URL.
 
-This simulates Ctrl+L → type URL → Enter. The same browser window is reused
-for the entire session — no killing, no restarting, just like a real person.
+## What the Analyzer Detects
 
-## What It Detects (Screen Analysis)
-
-| Element | Color Signature | Example |
+| Element | Color | What |
 |---|---|---|
-| **Button** | R>200, G=80-200, B<140 | "Continue", "Submit" buttons |
-| **Modal** | R=80-130, G<80, B>120 | Purple gradient overlay popups |
-| **Link** | R<80, G=80-180, B>120 | Blue hyperlinks |
-| **Footer** | R<30, G<30, B<30 | Dark navigation bar |
+| **Button** | Warm orange/pink | "Continue", "Submit", "Next" |
+| **Modal** | Purple gradient | Overlay popups, cookie banners |
+| **Link** | Blue | Hyperlinks |
+| **Text** | Dark | Body text, headings |
+| **Footer** | Black | Navigation bars |
 
-No OCR or DOM access needed — works on any website by analyzing pixel colors.
+Works on any visual UI — no OCR, no DOM access.
 
-## Command Reference
+## Commands
 
-### Environment (one-time setup)
-
-| Command | Purpose |
+### Desktop
+| Command | What |
 |---|---|
-| `bash setup/start.sh [url]` | Start Xvfb + fluxbox + x11vnc + browser |
-| `bash setup/stop.sh` | Destroy everything (rarely needed) |
-| `bash scripts/status.sh` | Check environment status |
+| `bash setup/start.sh [url]` | Start desktop (default: Google) |
+| `bash setup/stop.sh` | Full teardown (rare) |
+| `bash scripts/status.sh` | Check running processes |
 
-### Navigation (persistent browser, never kill/reopen)
-
-| Command | Purpose |
+### Browse
+| Command | What |
 |---|---|
-| `bash scripts/browser.sh open <url>` | Navigate to URL (Ctrl+L → type → Enter) |
-| `bash scripts/browser.sh new-tab <url>` | Open in new tab (Ctrl+T) |
-| `bash scripts/browser.sh refresh` | Reload page (Ctrl+R) |
-| `bash scripts/browser.sh back` | Go back (Alt+Left) |
-| `bash scripts/browser.sh forward` | Go forward (Alt+Right) |
-| `bash scripts/browser.sh close-tab` | Close current tab (Ctrl+W) |
-| `bash scripts/browser.sh focus` | Bring window to front |
+| `bash scripts/browser.sh open <url>` | Navigate (Ctrl+L → type → Enter) |
+| `bash scripts/browser.sh new-tab <url>` | Open tab (Ctrl+T) |
+| `bash scripts/browser.sh refresh` | Reload (Ctrl+R) |
+| `bash scripts/browser.sh back` | Back (Alt+Left) |
+| `bash scripts/browser.sh forward` | Forward (Alt+Right) |
+| `bash scripts/browser.sh close-tab` | Close tab (Ctrl+W) |
 
-### Interaction
-
-| Command | Purpose |
+### Click
+| Command | What |
 |---|---|
-| `bash scripts/click.sh <x> <y>` | Click at coordinates |
-| `bash scripts/click.sh --text <hint>` | Find button by hint and click |
-| `bash scripts/click.sh --element modal` | Dismiss modal overlay |
-| `bash scripts/scroll.sh down/up <n>` | Scroll N steps |
-| `bash scripts/scroll.sh page-down` | One page down |
+| `bash scripts/click.sh 640 480` | Click coordinates |
+| `bash scripts/click.sh --text continue` | Find button by hint |
+| `bash scripts/click.sh --element modal` | Dismiss popup |
+
+### Scroll
+| Command | What |
+|---|---|
+| `bash scripts/scroll.sh down 5` | Scroll down N steps |
+| `bash scripts/scroll.sh up 3` | Scroll up N steps |
 | `bash scripts/scroll.sh bottom` | Jump to bottom |
+| `bash scripts/scroll.sh top` | Jump to top |
+| `bash scripts/scroll.sh page-down` | One page down |
+
+### Type
+| Command | What |
+|---|---|
 | `bash scripts/type.sh "text"` | Type text |
-| `bash scripts/type.sh --key Return` | Press a key |
+| `bash scripts/type.sh --key Return` | Press key |
+| `bash scripts/type.sh --key "ctrl+a"` | Key combo |
 
-### Analysis
-
-| Command | Purpose |
+### Analyze
+| Command | What |
 |---|---|
 | `bash scripts/screenshot.sh` | Take screenshot |
 | `bash scripts/screenshot.sh --analyze` | Screenshot + analyze |
-| `python3 lib/screen_analyzer.py --capture` | Full screen analysis |
-| `python3 lib/screen_analyzer.py --capture --json` | Analysis as JSON |
-| `python3 lib/element_locator.py --find continue` | Find element by hint |
+| `python3 lib/screen_analyzer.py --capture` | Full analysis |
+| `python3 lib/screen_analyzer.py --capture --json` | JSON output |
 
-## Typical AI Session
+## Human-Like Workflow
+
+```
+look at screen → think → click or type or scroll → wait → look again
+```
+
+Vary your actions naturally:
+- Scroll different amounts each time (3, 7, page-down)
+- Wait realistic times (2-5s after load, 1-3s after click)
+- Mix click methods (coordinates, text hints)
+- Handle modals as they appear
+- Never kill the browser — just navigate
+
+## Example
 
 ```bash
-# Step 1: Start once
 bash setup/start.sh
-
-# Step 2: Navigate
 bash scripts/browser.sh open "https://vplink.in/UbpV2D"
 sleep 4
-
-# Step 3: Analyze
 python3 lib/screen_analyzer.py --capture
-
-# Step 4: Click
 bash scripts/click.sh --text continue
-sleep 3
-
-# Step 5: Verify
+sleep 2
 bash scripts/screenshot.sh --analyze
-
-# Step 6: Next task (same browser, no restart)
-bash scripts/browser.sh open "https://other-site.com"
+bash scripts/scroll.sh down 5
+bash scripts/browser.sh open "https://next-site.com"
 ```
 
 ## Agent Integration
 
 Give your AI agent the prompt in **[AGENTS.md](AGENTS.md)** to enable full
-browser automation capability.
+desktop control. It will see the screen, decide what to do, and act like
+a human at a computer.
 
 ## Configuration
 
 ```bash
-export DISPLAY=:99           # X display (default: :99)
-export VNC_PORT=5900         # VNC port (default: 5900)
-export BROWSER=surf          # Browser: surf, qutebrowser, links2
-export SCREEN_SIZE="1280x720x24"  # Screen resolution
+export DISPLAY=:99           # X display
+export VNC_PORT=5900         # VNC port
+export BROWSER=surf          # surf, qutebrowser, or links2
+export SCREEN_SIZE="1280x720x24"
 ```
 
 ## Requirements
 
-- **OS**: Linux (Ubuntu/Debian, Fedora, Arch tested)
-- **Packages**: Xvfb, x11vnc, fluxbox, xdotool, Python 3, Pillow
-- **Browser**: surf (default), qutebrowser, or links2
+Linux (Ubuntu/Debian, Fedora, Arch) — Xvfb, x11vnc, fluxbox, xdotool, Python3, Pillow.
 
-## Repository Structure
+## Structure
 
 ```
-browsing-skill/
-├── skill.jsonc              # opencode skill manifest
-├── AGENTS.md                # AI agent prompt (copy-paste)
-├── README.md                # This file
+desktop-skill/
+├── skill.jsonc           # Skill manifest
+├── AGENTS.md             # Agent prompt (copy-paste)
+├── README.md             # This file
 ├── setup/
-│   ├── install.sh           # One-time dependency installer
-│   ├── start.sh             # Start environment (persistent session)
-│   └── stop.sh              # Destroy everything
+│   ├── install.sh        # One-time dependency install
+│   ├── start.sh          # Start desktop (persistent)
+│   └── stop.sh           # Destroy environment
 ├── scripts/
-│   ├── browser.sh           # Browser navigation (never kill/reopen)
-│   ├── click.sh             # Click elements
-│   ├── scroll.sh            # Scroll pages
-│   ├── type.sh              # Type text
-│   ├── screenshot.sh        # Take screenshots
-│   └── status.sh            # Environment status
+│   ├── browser.sh        # Web navigation
+│   ├── click.sh          # Mouse clicks
+│   ├── scroll.sh         # Scrolling
+│   ├── type.sh           # Keyboard typing
+│   ├── screenshot.sh     # Screenshots
+│   └── status.sh         # Environment status
 ├── lib/
-│   ├── screen_analyzer.py   # Screen analysis engine
-│   └── element_locator.py   # Element detection + clicking
+│   ├── screen_analyzer.py  # Visual analysis engine
+│   └── element_locator.py  # Element detection
 └── test/
-    ├── test_env.sh          # Environment tests
-    └── test_browse.sh       # Browsing workflow tests
+    ├── test_env.sh
+    └── test_browse.sh
 ```
 
 ## License
