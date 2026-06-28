@@ -86,6 +86,16 @@ class ScreenAnalyzer:
             self.img = None
         self.w = self.img.width if self.img else 0
         self.h = self.img.height if self.img else 0
+        # Initialize all attributes to prevent AttributeError
+        self.modals = []
+        self.buttons = []
+        self.links = []
+        self.text_regions = []
+        self.top_bar = None
+        self.bottom_bar = None
+        self.content_area = None
+        self.sidebar = None
+        self.dominant_colors = {}
 
     @classmethod
     def capture(cls, display=":99", output_path="/tmp/screen.png"):

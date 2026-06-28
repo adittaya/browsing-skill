@@ -1,7 +1,7 @@
 {
   "name": "desktop-automation",
   "description": "Full graphical desktop for AI agents. Auto-detects Termux, proot-distro, enterprise Linux, bare metal, and existing desktop. Xvfb + VNC + fluxbox + browser. Click, type, scroll, OCR, clipboard, recording, dialogs, downloads, adaptive wait, health watchdog. Detects residential vs datacenter IP and configures SOCKS5 proxy. Human-like variable actions.",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "author": "https://github.com/adittaya",
   "repository": "https://github.com/adittaya/browsing-skill",
 
@@ -88,9 +88,46 @@
           "bash scripts/network.sh providers"
         ]
       },
+      "desktop-read": {
+        "description": "Linux Desktop Engine: read screen using accessibility tree (pyatspi) + OCR (mss + pytesseract). Returns structured UI hierarchy, OCR text with coordinates, and active window info. Best method for native Linux apps.",
+        "command": "bash scripts/desktop_read.sh [--accessibility-only|--ocr-only]"
+      },
+      "desktop-click": {
+        "description": "Linux Desktop Engine: click by coordinates, find text and click (accessibility first, then OCR), or find icon via OpenCV template matching.",
+        "examples": [
+          "bash scripts/desktop_click.sh 640 480",
+          "bash scripts/desktop_click.sh --text 'Continue'",
+          "bash scripts/desktop_click.sh --template close_icon.png"
+        ]
+      },
+      "desktop-status": {
+        "description": "Check which Linux Desktop backends are available (pyatspi, tesseract, opencv, pyautogui, xdotool)",
+        "command": "bash scripts/desktop_status.sh"
+      },
       "health": {
         "description": "Health watchdog status (auto-recovery for Xvfb, VNC, fluxbox, browser)",
         "command": "bash setup/watchdog.sh status"
+      },
+      "dom-browse": {
+        "description": "DOM Engine: navigate using headless Playwright Chromium. Returns final URL after redirects, page type, text length, visible elements. Use for JS-heavy/gate sites that crash surf/Chrome.",
+        "command": "bash scripts/dom_browse.sh open <url>"
+      },
+      "dom-click": {
+        "description": "DOM Engine: find and click elements via DOM introspection. Auto-detect Continue/Get Link buttons, or specify --text or --selector. Also --scan to dump all interactive elements.",
+        "examples": [
+          "bash scripts/dom_click.sh",
+          "bash scripts/dom_click.sh --scan",
+          "bash scripts/dom_click.sh --text 'Get Link'",
+          "bash scripts/dom_click.sh --selector '#tp-snp2'"
+        ]
+      },
+      "dom-observe": {
+        "description": "DOM Engine: 6-step observation methodology on a page. Returns URL, text length, page type, interactive elements, gate keyword analysis, and screenshot. Understand any unknown page.",
+        "command": "bash scripts/dom_observe.sh [url]"
+      },
+      "dom-trace": {
+        "description": "DOM Engine: full redirect chain tracer. Follows redirects, clicks popups, waits for JS timers, scrolls for bottom buttons, captures new-tab destinations. Saves log + screenshot + result JSON. No hardcoded domains.",
+        "command": "bash scripts/dom_trace.sh <gate-url> [output-dir]"
       }
     },
 
@@ -109,8 +146,15 @@
       "tesseract-ocr", "tesseract-ocr-eng",
       "xclip", "xsel",
       "ffmpeg",
-      "surf (or qutebrowser/links2/firefox as fallback)"
+      "surf (or qutebrowser/links2/firefox as fallback)",
+      "python3-playwright (pip install playwright && playwright install chromium)"
     ],
+    "dom_engine": {
+      "description": "Playwright headless Chromium for modern JS-heavy sites. Supercedes visual desktop for gate/redirect chain automation.",
+      "install": "pip3 install playwright && python3 -m playwright install chromium",
+      "library": "lib/dom_engine.py",
+      "methodology": "6-step observation: probe, scan DOM, detect type, poll timers, scroll+click, capture new tab. No hardcoded domains or timers."
+    },
 
     "supported_environments": [
       "Ubuntu/Debian (apt)",

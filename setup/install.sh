@@ -379,6 +379,20 @@ main() {
         warn "No WebKit browser found (surf/qutebrowser) — will use links2 or fallback"
     fi
 
+    # ── Playwright DOM Engine ──
+    if python3 -c "import playwright" 2>/dev/null; then
+        log "Playwright: OK"
+    else
+        echo ""
+        echo "  ── Optional: Install Playwright DOM Engine ──"
+        echo "  The DOM engine uses Playwright headless Chromium for modern"
+        echo "  JS-heavy gate/redirect sites. Install it for chain tracing:"
+        echo ""
+        echo "    pip3 install playwright"
+        echo "    python3 -m playwright install chromium"
+        echo ""
+    fi
+
     # ── Make scripts executable ──
     chmod +x setup/*.sh scripts/*.sh test/*.sh 2>/dev/null || true
 

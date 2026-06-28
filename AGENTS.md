@@ -160,14 +160,14 @@ look at screen → think → click or type or scroll → wait → look again
 - **Never kill browser**: just navigate to the next URL
 - **Proxy awareness**: if on datacenter IP, offer to set up residential proxy
 
-## Example Session
+## Example Session (Visual Desktop)
 
 ```bash
 # 1. Start (one time)
 bash setup/start.sh
 
 # 2. Go to page
-bash scripts/browser.sh open "https://vplink.in/UbpV2D"
+bash scripts/browser.sh open "https://example.com/target"
 bash scripts/wait.sh stable
 
 # 3. See what's there
@@ -191,7 +191,215 @@ bash scripts/scroll.sh down 2
 bash scripts/browser.sh open "https://next-site.com"
 ```
 
-## The Screen Analyzer
+---
+
+## Advanced Intelligence: DOM Engine (Playwright Headless)
+
+> **When to use:** Modern JS-heavy gate/redirect sites that crash surf/Chrome in Xvfb.
+> The DOM engine uses Playwright headless Chromium — it reads the DOM directly
+> instead of relying on screen pixels and OCR.
+
+The DOM engine is available alongside the visual desktop. It uses a `lib/dom_engine.py`
+library that knows how to trace multi-hop redirect chains (adfly, shrinkme, shorte, etc.).
+
+### Core Intelligence: The 6-Step Observation Methodology
+
+Every unknown page is analyzed the same way — no hardcoded assumptions.
+
+| Step | What | Command |
+|---|---|---|
+| **1. Probe** | Navigate and see where you land (redirects, final URL) | `bash scripts/dom_browse.sh open <url>` |
+| **2. Scan DOM** | Dump all clickable elements with positions | `bash scripts/dom_click.sh --scan` |
+| **3. Detect type** | Auto-classify page: redirect, gate, gate_action, content, content_action, destination | `bash scripts/dom_observe.sh` |
+| **4. Poll timers** | Watch for elements appearing (vs. guessing timeout) | Built into `dom_engine.py.poll_for_element()` |
+| **5. Scroll + click** | Incremental scroll, check for bottom buttons, retry from top | `bash scripts/dom_click.sh` (default: auto-find) |
+| **6. Capture new tab** | Register page event listener before clicking "Get Link" | Built into `dom_engine.py.start()` |
+
+### DOM Engine Commands
+
+| Command | What it does |
+|---|---|
+| `bash scripts/dom_browse.sh open <url>` | Navigate using headless Playwright. Returns final URL + page type + element list. |
+| `bash scripts/dom_browse.sh scan` | Scan current page interactable elements |
+| `bash scripts/dom_browse.sh status` | Check if Playwright is installed |
+| `bash scripts/dom_click.sh` | Auto-detect and click Continue/Get Link buttons |
+| `bash scripts/dom_click.sh --scan` | Dump all visible interactive elements as JSON |
+| `bash scripts/dom_click.sh --text "Continue"` | Find and click by text (regex) |
+| `bash scripts/dom_click.sh --selector "#tp-snp2"` | Find and click by CSS selector |
+| `bash scripts/dom_observe.sh [url]` | Run full 6-step observation on a page |
+| `bash scripts/dom_trace.sh <url> [outdir]` | **Full chain tracer**: follows redirects, clicks popups, waits for timers, scrolls for buttons, captures new-tab destinations. Saves log + screenshot + result JSON. |
+
+### Decision Tree for Any Page
+
+When you encounter a new page, follow this logic:
+
+```
+New page loaded
+│
+├─ Page very short (<100 chars)?
+│   └─ → This is a redirect/transition page. Wait 5s and re-check URL.
+│
+├─ Page short (100-800 chars)?
+│   ├─ Has #continueBtn?
+│   │   └─ → Popup detected. Click (force=True, bypass overlay). Wait for new elements.
+│   ├─ Has "Get Link", "Your link is almost ready", countdown timer?
+│   │   └─ → Gate landing page. Poll for Get Link button. Register new-tab handler first.
+│   └─ Otherwise?
+│       └─ → Unknown gate. Scan DOM, look for any button with "continue"/"get link" text.
+│
+├─ Page long (>800 chars)?
+│   ├─ Has bottom buttons (#tp-snp2, #btn7, #cross-snp2, CONTINUE link)?
+│   │   └─ → Content with navigation. Scroll to button and click.
+│   └─ No buttons found after scrolling full page + retry?
+│       └─ → Possible destination. Record URL and stop.
+│
+└─ No gate keywords, not a known gate domain?
+    └─ → Destination reached! Record final URL.
+```
+
+### Known Button Selectors (DOM Engine)
+
+Common patterns observed across gate sites. The engine tries them in priority order:
+
+| Priority | Selector | Likely Purpose |
+|---|---|---|
+| 1 | `#continueBtn` | Popup overlay "Continue" button |
+| 2 | `#tp-snp2` | Bottom-of-page navigation |
+| 3 | `#btn7` | Bottom-of-page navigation (variant) |
+| 4 | `#cross-snp2` | Bottom-of-page navigation (variant) |
+| 5 | `#get-link`, `#gt-link` | Final "Get Link" button on landing page |
+| 6 | `a:has-text('Get Link')`, `button:has-text('Get Link')` | Text-based Get Link |
+| 7 | `a:has-text('CONTINUE')`, `button:has-text('CONTINUE')` | Text-based Continue |
+| 8 | `.skip-button`, `#skip-btn`, `a:has-text('Skip')` | Skip ad / skip timer |
+
+### Example: Tracing Any Gate Chain
+
+```bash
+# Quick trace (one command)
+bash scripts/dom_trace.sh https://example-gate.com/link123 /tmp/my_trace
+cat /tmp/my_trace/result.json   # Shows destination_url
+
+# Step-by-step (manual observation)
+bash scripts/dom_browse.sh open https://example-gate.com/link123
+bash scripts/dom_observe.sh     # Step 1-3: probe, scan, detect type
+bash scripts/dom_click.sh       # Step 4-5: click found button
+bash scripts/dom_observe.sh     # Re-observe after navigation
+# ... repeat until destination
+```
+
+### When to Use Each Engine
+
+| Situation | Use |
+|---|---|
+| Page loads in surf/firefox fine | Visual desktop (OCR, screen analysis) |
+| Page requires JS (gate, redirect, timer) | DOM engine (Playwright headless) |
+| Chrome crashes with SIGTRAP | DOM engine (no Xvfb needed) |
+| Need to see what's happening | Visual desktop + VNC |
+| Need reliable automation | DOM engine (DOM introspection > pixel analysis) |
+| Page has overlay popups | DOM engine (`force=True` bypasses animations) |
+| Page opens destination in new tab | DOM engine (built-in `ctx.on('page')` handler) |
+
+### Running from the Python Library Directly
+
+```python
+from lib.dom_engine import DOMEngine
+import asyncio
+
+async def main():
+    engine = DOMEngine()
+    page = await engine.start()
+    await engine.navigate("https://example-gate.com/some-link")
+    result = await engine.trace_chain("https://example-gate.com/some-link")
+    print(f"Destination: {result['destination_url']}")
+    await engine.close()
+
+asyncio.run(main())
+```
+
+---
+
+## Linux Desktop Engine (Native X11)
+
+> **When to use:** Reading the screen of native Linux apps (not web pages).
+> Uses the accessibility tree (pyatspi) as the PRIMARY method — reads the
+> actual UI element hierarchy as structured text, no OCR needed for most apps.
+
+The Linux Desktop Engine is a third parallel engine alongside the visual desktop
+and DOM engine. It uses FOUR methods in priority order:
+
+| Priority | Method | Library | What it reads |
+|---|---|---|---|
+| 1 | **Accessibility tree** | `pyatspi` | UI element hierarchy: buttons, labels, windows, menus — as clean text with coordinates |
+| 2 | **OCR** | `mss` + `pytesseract` | Visible text as words with pixel coordinates |
+| 3 | **Template matching** | `opencv-python` | Graphical icons by matching a template image |
+| 4 | **Actions** | `pyautogui` / `xdotool` | Moves mouse, clicks, types |
+
+### Installation
+
+```bash
+sudo apt install python3-pyatspi tesseract-ocr  # System deps
+pip3 install pyautogui python-xlib opencv-python-headless mss pytesseract
+```
+
+### Linux Desktop Commands
+
+| Command | What it does |
+|---|---|
+| `bash scripts/desktop_read.sh` | Read full screen: accessibility tree + OCR text + active window |
+| `bash scripts/desktop_read.sh --accessibility-only` | Read only the accessibility tree (structured UI elements) |
+| `bash scripts/desktop_read.sh --ocr-only` | Read only OCR text with coordinates |
+| `bash scripts/desktop_click.sh <x> <y>` | Click at pixel coordinates |
+| `bash scripts/desktop_click.sh --text "Continue"` | Find text (accessibility → OCR) and click it |
+| `bash scripts/desktop_click.sh --template icon.png` | Find an icon on screen using OpenCV template matching |
+| `bash scripts/desktop_status.sh` | Check which backends are installed |
+
+### The Intelligence Pattern (How It Thinks)
+
+```
+Agent needs to interact with screen
+│
+├─ Call desktop_read.sh
+│   ├─ pyatspi accessibility tree available?
+│   │   └─ YES → Read UI hierarchy directly (best: exact text, exact positions)
+│   │   └─ NO  → Fall back to OCR (mss screenshot + pytesseract)
+│   │
+│   ├─ Parse results: find target element
+│   │   ├─ Button "Continue" found in accessibility tree?
+│   │   │   └─ YES → Click its exact coordinates
+│   │   ├─ Text "Submit" found via OCR?
+│   │   │   └─ YES → Click its center coordinates
+│   │   └─ Neither found?
+│   │       └─ → Try OpenCV template matching for icon
+│   │
+│   └─ Execute: click / type / press key
+│       ├─ pyautogui available?
+│       │   └─ YES → Use PyAutoGUI (human-like random delays)
+│       │   └─ NO  → Fall back to xdotool
+│       └─ Return success/failure
+```
+
+### Example: Reading a Native App
+
+```bash
+# Full screen read (accessibility tree + OCR)
+bash scripts/desktop_read.sh
+
+# Output (abbreviated):
+# {
+#   "accessibility_text": "window: Firefox\n  panel: Navigation\n    button: Back\n    button: Forward\n    text: Address Bar\n  document: webpage content\n    link: https://example.com\n    button: Submit",
+#   "ocr_text": "Found text 'Firefox' at (45, 12)\nFound text 'Submit' at (640, 480)",
+#   "active_window": {"title": "Firefox", "x": 0, "y": 0, "width": 1280, "height": 720}
+# }
+
+# Click the Submit button
+bash scripts/desktop_click.sh --text Submit
+
+# Type into the focused field
+bash scripts/desktop_click.sh --text "Address Bar"
+bash scripts/desktop_type.sh "https://example.com"
+```
+
+## The Screen Analyzer (Legacy)
 
 Detects UI elements by color (no OCR needed):
 
