@@ -466,3 +466,27 @@ Then: `bash ~/.local/share/desktop-skill/setup/start.sh`
 ## VNC
 
 Connect to `localhost:5900` with any VNC client to watch the desktop live.
+
+### Public Tunnel (bore)
+
+When the agent runs in the cloud (Codespaces, EC2, etc.), VNC is not directly
+accessible. Use the bore tunnel to expose it publicly — no account needed.
+
+```bash
+# Start tunnel
+bash scripts/tunnel.sh start
+
+# Get the public URL
+bash scripts/tunnel.sh url
+# → bore.pub:22441
+
+# Stop tunnel
+bash scripts/tunnel.sh stop
+
+# Check status
+bash scripts/tunnel.sh status
+```
+
+The tunnel auto-downloads the `bore` binary on first run. Port 5900 is
+forwarded to a public `bore.pub:<random-port>` address. Connect any VNC
+client to that address — no password, no auth.

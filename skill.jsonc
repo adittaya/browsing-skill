@@ -1,7 +1,7 @@
 {
   "name": "desktop-automation",
   "description": "Full graphical desktop for AI agents. Auto-detects Termux, proot-distro, enterprise Linux, bare metal, and existing desktop. Xvfb + VNC + fluxbox + browser. Click, type, scroll, OCR, clipboard, recording, dialogs, downloads, adaptive wait, health watchdog. Detects residential vs datacenter IP and configures SOCKS5 proxy. Human-like variable actions.",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "author": "https://github.com/adittaya",
   "repository": "https://github.com/adittaya/browsing-skill",
 
@@ -103,6 +103,15 @@
       "desktop-status": {
         "description": "Check which Linux Desktop backends are available (pyatspi, tesseract, opencv, pyautogui, xdotool)",
         "command": "bash scripts/desktop_status.sh"
+      },
+      "tunnel": {
+        "description": "Expose VNC (port 5900) to the internet via bore.pub — no account needed. Auto-downloads bore binary on first run.",
+        "examples": [
+          "bash scripts/tunnel.sh start",
+          "bash scripts/tunnel.sh url",
+          "bash scripts/tunnel.sh status",
+          "bash scripts/tunnel.sh stop"
+        ]
       },
       "health": {
         "description": "Health watchdog status (auto-recovery for Xvfb, VNC, fluxbox, browser)",
