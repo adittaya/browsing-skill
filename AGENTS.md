@@ -173,6 +173,18 @@ Detection regions:
 ## Installation (first time)
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/adittaya/browsing-skill/master/setup/install.sh | bash
+```
+
+This installs everything to `~/.local/share/desktop-skill/`. Then:
+
+```bash
+bash ~/.local/share/desktop-skill/setup/start.sh
+```
+
+Or clone manually:
+
+```bash
 git clone https://github.com/adittaya/browsing-skill.git
 cd browsing-skill
 bash setup/install.sh
