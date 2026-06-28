@@ -109,6 +109,9 @@ install_pkg_debian() {
         xvfb x11vnc fluxbox xdotool wmctrl xterm \
         python3 python3-pip python3-pil \
         imagemagick x11-utils x11-xserver-utils \
+        tesseract-ocr tesseract-ocr-eng \
+        xclip xsel \
+        ffmpeg \
         curl wget git ca-certificates 2>&1 | tail -3
 
     for pkg in surf qutebrowser links2 chromium-browser firefox; do
@@ -127,7 +130,10 @@ install_pkg_fedora() {
     sudoer dnf install -y \
         xorg-x11-server-Xvfb x11vnc fluxbox xdotool wmctrl xterm \
         python3 python3-pillow python3-pip \
-        ImageMagick xwd git curl wget 2>&1 | tail -3
+        ImageMagick xwd git curl wget \
+        tesseract tesseract-langpack-eng \
+        xclip xsel \
+        ffmpeg 2>&1 | tail -3
 
     for pkg in surf qutebrowser links2 chromium firefox; do
         if command -v "$pkg" >/dev/null 2>&1; then log "$pkg already installed"; break; fi
@@ -143,7 +149,8 @@ install_pkg_rhel() {
     sudoer yum install -y \
         xorg-x11-server-Xvfb x11vnc fluxbox xdotool wmctrl xterm \
         python3 python3-pillow python3-pip \
-        ImageMagick git curl wget 2>&1 | tail -3
+        ImageMagick git curl wget \
+        tesseract xclip ffmpeg 2>&1 | tail -3
 
     pip3 install --quiet Pillow 2>/dev/null || true
 }
@@ -154,6 +161,9 @@ install_pkg_arch() {
         xorg-server-xvfb x11vnc fluxbox xdotool wmctrl xterm \
         python python-pillow python-pip \
         imagemagick xorg-xwd xorg-xrandr \
+        tesseract tesseract-data-eng \
+        xclip xsel \
+        ffmpeg \
         git curl wget 2>&1 | tail -3
 
     for pkg in surf qutebrowser links2 chromium firefox; do
@@ -170,6 +180,9 @@ install_pkg_alpine() {
         xvfb x11vnc fluxbox xdotool wmctrl xterm \
         python3 py3-pillow py3-pip \
         imagemagick xrandr \
+        tesseract-ocr \
+        xclip xsel \
+        ffmpeg \
         git curl wget 2>&1 | tail -3
     
     for pkg in surf qutebrowser links2 chromium firefox; do
@@ -185,7 +198,10 @@ install_pkg_suse() {
     sudoer zypper install -y \
         xvfb x11vnc fluxbox xdotool wmctrl xterm \
         python3 python3-pillow python3-pip \
-        ImageMagick git curl wget 2>&1 | tail -3
+        ImageMagick git curl wget \
+        tesseract-ocr tesseract-ocr-traineddata-english \
+        xclip xsel \
+        ffmpeg 2>&1 | tail -3
 
     for pkg in surf qutebrowser links2 chromium firefox; do
         if command -v "$pkg" >/dev/null 2>&1; then log "$pkg already installed"; break; fi

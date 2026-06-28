@@ -1,7 +1,7 @@
 {
   "name": "desktop-automation",
-  "description": "Full graphical desktop for AI agents. Auto-detects Termux, proot-distro, enterprise Linux, and bare metal. Xvfb + VNC + fluxbox + browser. Click, type, scroll, browse — any desktop task with human-like variable actions.",
-  "version": "2.1.0",
+  "description": "Full graphical desktop for AI agents. Auto-detects Termux, proot-distro, enterprise Linux, bare metal, and existing desktop. Xvfb + VNC + fluxbox + browser. Click, type, scroll, OCR, clipboard, recording, dialogs, downloads, adaptive wait, health watchdog. Detects residential vs datacenter IP and configures SOCKS5 proxy. Human-like variable actions.",
+  "version": "3.0.0",
   "author": "https://github.com/adittaya",
   "repository": "https://github.com/adittaya/browsing-skill",
 
@@ -14,88 +14,83 @@
     },
 
     "commands": {
-      "navigate": {
-        "description": "Open a URL in the browser (Ctrl+L, type, Enter)",
-        "command": "bash scripts/browser.sh open <url>"
+      "browse": {
+        "description": "Navigate the web (Ctrl+L, type, Enter) or new-tab, refresh, back, forward, close-tab, focus",
+        "command": "bash scripts/browser.sh open|new-tab|refresh|back|forward|close-tab <url>"
       },
-      "new-tab": {
-        "description": "Open URL in a new browser tab",
-        "command": "bash scripts/browser.sh new-tab <url>"
-      },
-      "refresh": {
-        "description": "Refresh the current page",
-        "command": "bash scripts/browser.sh refresh"
-      },
-      "back": {
-        "description": "Go back in history",
-        "command": "bash scripts/browser.sh back"
-      },
-      "forward": {
-        "description": "Go forward in history",
-        "command": "bash scripts/browser.sh forward"
-      },
-      "close-tab": {
-        "description": "Close current browser tab",
-        "command": "bash scripts/browser.sh close-tab"
-      },
-      "focus": {
-        "description": "Bring browser window to front",
-        "command": "bash scripts/browser.sh focus"
-      },
-
       "click": {
-        "description": "Click at coordinates or find and click an element by hint",
+        "description": "Click at coordinates, by text hint (--text), or right-click with button 3",
         "examples": [
           "bash scripts/click.sh 640 480",
           "bash scripts/click.sh 640 480 3 (right-click)",
-          "bash scripts/click.sh --text continue",
-          "bash scripts/click.sh --text 'CONTINUE →'",
-          "bash scripts/click.sh --element modal"
+          "bash scripts/click.sh --text continue"
         ]
       },
-      "click-text": {
-        "description": "Find a UI element by text hint and click it",
-        "command": "bash scripts/click.sh --text <hint>"
-      },
-
       "scroll": {
-        "description": "Scroll the page or viewport",
-        "examples": [
-          "bash scripts/scroll.sh down 5",
-          "bash scripts/scroll.sh up 3",
-          "bash scripts/scroll.sh bottom",
-          "bash scripts/scroll.sh top",
-          "bash scripts/scroll.sh page-down"
-        ]
+        "description": "Scroll down/up N steps, page-down, top, bottom",
+        "command": "bash scripts/scroll.sh <direction> [amount]"
       },
-
       "type": {
         "description": "Type text or press keyboard keys",
-        "examples": [
-          "bash scripts/type.sh 'Hello World'",
-          "bash scripts/type.sh --key Return",
-          "bash scripts/type.sh --key 'ctrl+a'",
-          "bash scripts/type.sh --key 'ctrl+c'"
-        ]
+        "command": "bash scripts/type.sh <text> or --key <key>"
       },
-
       "screenshot": {
-        "description": "Take a screenshot of the desktop",
+        "description": "Capture the screen with optional analysis",
+        "command": "bash scripts/screenshot.sh [path] [--analyze|--json]"
+      },
+      "analyze": {
+        "description": "Detect UI elements: buttons, modals, links, layout, colors",
+        "command": "python3 lib/screen_analyzer.py --capture [--json]"
+      },
+      "ocr": {
+        "description": "Read text from screen using Tesseract OCR",
         "examples": [
-          "bash scripts/screenshot.sh",
-          "bash scripts/screenshot.sh /tmp/screen.png --analyze",
-          "bash scripts/screenshot.sh /tmp/screen.png --json"
+          "python3 lib/ocr.py --capture",
+          "python3 lib/ocr.py --capture --json",
+          "python3 lib/ocr.py --find 'Continue'"
         ]
       },
-
-      "analyze": {
-        "description": "Analyze the screen for UI elements (buttons, modals, links, layout)",
-        "command": "python3 lib/screen_analyzer.py --capture"
+      "clipboard": {
+        "description": "Copy, paste, read, or clear the system clipboard",
+        "examples": [
+          "bash scripts/clipboard.sh copy 'text'",
+          "bash scripts/clipboard.sh read",
+          "bash scripts/clipboard.sh paste"
+        ]
       },
-
-      "locate": {
-        "description": "Find a UI element on screen by text hint",
-        "command": "python3 lib/element_locator.py --find <hint>"
+      "wait": {
+        "description": "Adaptive wait: stable screen, text appearance, button, modal, or plain sleep",
+        "examples": [
+          "bash scripts/wait.sh stable",
+          "bash scripts/wait.sh text 'Continue'",
+          "bash scripts/wait.sh button continue",
+          "bash scripts/wait.sh seconds 5"
+        ]
+      },
+      "record": {
+        "description": "Record the screen with ffmpeg (start, stop, status, list, cleanup)",
+        "command": "bash scripts/record.sh start|stop|status|list"
+      },
+      "dialog": {
+        "description": "Detect and handle JS dialogs (alert, confirm, prompt)",
+        "command": "bash scripts/dialog.sh detect|accept|dismiss|type"
+      },
+      "download": {
+        "description": "Monitor downloads: list, latest, watch, open, cleanup",
+        "command": "bash scripts/download.sh list|latest|watch|open <file>"
+      },
+      "network": {
+        "description": "Check IP type (residential vs datacenter), configure SOCKS5/HTTP proxy",
+        "examples": [
+          "bash scripts/network.sh check",
+          "bash scripts/network.sh proxy-set",
+          "bash scripts/network.sh proxy-test",
+          "bash scripts/network.sh providers"
+        ]
+      },
+      "health": {
+        "description": "Health watchdog status (auto-recovery for Xvfb, VNC, fluxbox, browser)",
+        "command": "bash setup/watchdog.sh status"
       }
     },
 
@@ -104,12 +99,16 @@
       "vnc_port": 5900,
       "screen_size": "1280x720x24",
       "browser": "surf",
-      "data_dir": "/tmp/desktop-skill"
+      "data_dir": "/tmp/desktop-skill",
+      "config": "~/.config/desktop-skill/config"
     },
 
     "dependencies": [
       "xvfb", "x11vnc", "fluxbox", "xdotool", "wmctrl",
       "python3", "python3-pil", "imagemagick",
+      "tesseract-ocr", "tesseract-ocr-eng",
+      "xclip", "xsel",
+      "ffmpeg",
       "surf (or qutebrowser/links2/firefox as fallback)"
     ],
 
@@ -121,9 +120,10 @@
       "openSUSE/SLES (zypper)",
       "Termux (pkg, Android)",
       "proot-distro containers",
-      "macOS (XQuartz, limited)"
+      "macOS (XQuartz, limited)",
+      "Existing Linux desktop (no Xvfb/VNC)"
     ],
 
-    "tags": ["desktop", "browser", "automation", "vnc", "screenshot", "ui-testing", "web-scraping", "human-like", "termux", "cross-platform"]
+    "tags": ["desktop", "browser", "automation", "vnc", "ocr", "clipboard", "screenshot", "proxy", "socks5", "residential-ip", "human-like", "termux", "cross-platform"]
   }
 }
