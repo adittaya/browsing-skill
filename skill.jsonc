@@ -1,13 +1,13 @@
 {
   "name": "desktop-automation",
-  "description": "Full graphical Linux desktop for AI agents: Xvfb, VNC, fluxbox, and surf browser. See the screen, click, type, scroll, navigate the web — anything a human can do. Primary focus is browsing but handles any desktop task with variable human-like actions.",
-  "version": "2.0.0",
+  "description": "Full graphical desktop for AI agents. Auto-detects Termux, proot-distro, enterprise Linux, and bare metal. Xvfb + VNC + fluxbox + browser. Click, type, scroll, browse — any desktop task with human-like variable actions.",
+  "version": "2.1.0",
   "author": "https://github.com/adittaya",
   "repository": "https://github.com/adittaya/browsing-skill",
 
   "skill": {
     "setup": {
-      "install": "bash setup/install.sh",
+      "install": "curl -fsSL https://raw.githubusercontent.com/adittaya/browsing-skill/master/setup/install.sh | bash",
       "start": "bash setup/start.sh [url]",
       "stop": "bash setup/stop.sh",
       "status": "bash scripts/status.sh"
@@ -47,6 +47,7 @@
         "description": "Click at coordinates or find and click an element by hint",
         "examples": [
           "bash scripts/click.sh 640 480",
+          "bash scripts/click.sh 640 480 3 (right-click)",
           "bash scripts/click.sh --text continue",
           "bash scripts/click.sh --text 'CONTINUE →'",
           "bash scripts/click.sh --element modal"
@@ -103,15 +104,26 @@
       "vnc_port": 5900,
       "screen_size": "1280x720x24",
       "browser": "surf",
-      "data_dir": "/tmp/browsing-skill"
+      "data_dir": "/tmp/desktop-skill"
     },
 
     "dependencies": [
       "xvfb", "x11vnc", "fluxbox", "xdotool", "wmctrl",
       "python3", "python3-pil", "imagemagick",
-      "surf (or qutebrowser/links2 as fallback)"
+      "surf (or qutebrowser/links2/firefox as fallback)"
     ],
 
-    "tags": ["desktop", "browser", "automation", "vnc", "screenshot", "ui-testing", "web-scraping", "human-like"]
+    "supported_environments": [
+      "Ubuntu/Debian (apt)",
+      "Fedora/RHEL/CentOS (dnf/yum)",
+      "Arch/Manjaro (pacman)",
+      "Alpine (apk)",
+      "openSUSE/SLES (zypper)",
+      "Termux (pkg, Android)",
+      "proot-distro containers",
+      "macOS (XQuartz, limited)"
+    ],
+
+    "tags": ["desktop", "browser", "automation", "vnc", "screenshot", "ui-testing", "web-scraping", "human-like", "termux", "cross-platform"]
   }
 }

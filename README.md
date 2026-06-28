@@ -157,7 +157,18 @@ export SCREEN_SIZE="1280x720x24"
 
 ## Requirements
 
-Linux (Ubuntu/Debian, Fedora, Arch) — Xvfb, x11vnc, fluxbox, xdotool, Python3, Pillow.
+| Environment | Package Manager | Notes |
+|---|---|---|
+| Ubuntu / Debian / Mint / Kali | `apt` | Full support |
+| Fedora / RHEL / CentOS / Rocky | `dnf` / `yum` | Full support |
+| Arch / Manjaro / EndeavourOS | `pacman` | Full support |
+| Alpine Linux | `apk` | Full support |
+| openSUSE / SLES | `zypper` | Full support |
+| **Termux** (Android native) | `pkg` | Uses Termux:X11 for display |
+| **proot-distro** (Android Linux) | `apt` / native | Xvfb may be limited, headless fallback |
+| macOS | `brew` | XQuartz required, limited |
+
+The installer auto-detects your environment and installs the right packages.
 
 ## Structure
 
