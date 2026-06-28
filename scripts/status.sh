@@ -14,9 +14,26 @@ echo ""
 echo "  Desktop Environment — Status"
 echo ""
 
+# Runtime detection (same logic as start.sh)
+detect_runtime() {
+    if [ -n "${TERMUX_VERSION:-}" ] || command -v termux-setup-storage >/dev/null 2>&1; then
+        echo "termux"; return
+    fi
+    if [ -n "${DISPLAY:-}" ]; then
+        if command -v xdpyinfo >/dev/null 2>&1 && xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then
+            echo "existing-desktop"; return
+        fi
+    fi
+    if [ -n "${WAYLAND_DISPLAY:-}" ] && [ -e "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY:-wayland-0}" 2>/dev/null ]; then
+        echo "existing-desktop"; return
+    fi
+    echo "terminal"
+}
+
 # Environment info
 echo "  Platform:    $(uname -s) $(uname -m)"
 echo "  Distro:      $( (cat /etc/os-release 2>/dev/null && echo "$PRETTY_NAME") || echo 'unknown')"
+echo "  Runtime:     $(detect_runtime)"
 if [ -n "${TERMUX_VERSION:-}" ]; then
     echo "  Termux:      v$TERMUX_VERSION"
 fi

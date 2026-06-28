@@ -20,12 +20,20 @@ can also interact with any desktop application, dialog, or system UI.
 
 ## The Desktop
 
-A virtual desktop runs on display `:99` with fluxbox window manager:
+The skill auto-detects your runtime environment and adapts:
 
-- **Screen**: 1280x720 pixels
-- **VNC**: port 5900 (connect any VNC client to watch in real-time)
-- **Browser**: surf (WebKit) — opens on Google by default
-- **Session**: the desktop stays running until you call stop.sh
+| If you're on... | It detects | And does this |
+|---|---|---|
+| **Headless server / SSH / TTY** | Terminal-only | Starts Xvfb + VNC (virtual display `:99`) |
+| **Linux desktop** (GNOME/KDE/Xfce) | Existing X11/Wayland | Uses your native display — no Xvfb, no VNC |
+| **Termux** (Android) | Termux environment | Tries Termux:X11, falls back headless |
+| **proot-distro** (Android Linux) | Proot container | Starts Xvfb if seccomp allows, else headless |
+
+So on a bare server, you get a virtual screen with VNC. On an existing desktop,
+you control the user's own display directly — no extra layers.
+
+**Browser**: surf (WebKit) — opens on Google by default. Once started, it
+persists. Never killed or reopened — just navigate to the next URL.
 
 ## How to Be Human-Like
 

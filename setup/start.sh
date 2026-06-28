@@ -9,20 +9,61 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 
-# ─── Environment detection ──────────────────────────────────────────────────
+# ─── Runtime environment detection ──────────────────────────────────────────
+# This determines what display system to use (not what package manager).
+# Three possible modes:
+#   existing-desktop  → user already has X11/Wayland, use it
+#   terminal          → pure terminal (SSH, TTY, headless server)
+#   termux            → Android Termux environment
 
-ENV_TYPE="linux"
+detect_runtime() {
+    # Termux
+    if [ -n "${TERMUX_VERSION:-}" ] || command -v termux-setup-storage >/dev/null 2>&1; then
+        echo "termux"
+        return
+    fi
+
+    # Check if DISPLAY is set AND usable (existing X11 desktop)
+    if [ -n "${DISPLAY:-}" ]; then
+        if command -v xdpyinfo >/dev/null 2>&1; then
+            if xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then
+                echo "existing-desktop"
+                return
+            fi
+        fi
+    fi
+
+    # Check Wayland
+    if [ -n "${WAYLAND_DISPLAY:-}" ] && [ -e "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY:-wayland-0}" 2>/dev/null ]; then
+        echo "existing-desktop"
+        return
+    fi
+
+    # No graphical environment detected
+    echo "terminal"
+}
+
+RUNTIME_ENV=$(detect_runtime)
+
+# Also detect container/distro type for platform-specific tweaks
+DISTRO_ENV="linux"
 if [ -n "${TERMUX_VERSION:-}" ] || command -v termux-setup-storage >/dev/null 2>&1; then
-    ENV_TYPE="termux"
+    DISTRO_ENV="termux"
 elif [ -f "/data/data/com.termux/files/usr/bin/proot-distro" ] || \
      grep -q "PROot-Distro" /proc/version 2>/dev/null; then
-    ENV_TYPE="proot-distro"
+    DISTRO_ENV="proot-distro"
 fi
 
 # ─── Configuration ──────────────────────────────────────────────────────────
 
-DISPLAY_NUM="${DISPLAY_NUM:-99}"
-DISPLAY=":$DISPLAY_NUM"
+# Only force :99 if no existing display
+if [ "$RUNTIME_ENV" = "terminal" ]; then
+    DISPLAY="${DISPLAY:-:99}"
+else
+    DISPLAY="${DISPLAY:-:99}"
+fi
+
+DISPLAY_NUM=$(echo "$DISPLAY" | sed 's/://')
 VNC_PORT="${VNC_PORT:-5900}"
 SCREEN_SIZE="${SCREEN_SIZE:-1280x720x24}"
 BROWSER="${BROWSER:-surf}"
@@ -39,7 +80,8 @@ DISPLAY_NUM=$DISPLAY_NUM
 VNC_PORT=$VNC_PORT
 BROWSER=$BROWSER
 SCREEN_SIZE=$SCREEN_SIZE
-ENV_TYPE=$ENV_TYPE
+RUNTIME_ENV=$RUNTIME_ENV
+DISTRO_ENV=$DISTRO_ENV
 XVFB_PID=$(pgrep -f "Xvfb $DISPLAY" 2>/dev/null | head -1 || echo "")
 X11VNC_PID=$(pgrep -f "x11vnc.*$DISPLAY" 2>/dev/null | head -1 || echo "")
 FLUXBOX_PID=$(pgrep -f "fluxbox.*$DISPLAY" 2>/dev/null | head -1 || echo "")
@@ -51,16 +93,31 @@ EOF
 # ─── X Server ───────────────────────────────────────────────────────────────
 
 ensure_xserver() {
-    # If DISPLAY already works (e.g. Termux:X11), skip Xvfb
+    # Case 1: Already in an existing desktop — use it
+    if [ "$RUNTIME_ENV" = "existing-desktop" ]; then
+        log "Existing desktop detected on $DISPLAY — skipping Xvfb"
+        log "Using native display (no VNC, no fluxbox)"
+        return 0
+    fi
+
+    # Case 2: DISPLAY is set and usable (override check)
     if [ -n "${DISPLAY:-}" ] && xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then
         log "Display $DISPLAY already active — skipping Xvfb"
         return 0
     fi
 
-    # In proot-distro, Xvfb may fail. Try it, but don't crash.
-    if [ "$ENV_TYPE" = "proot-distro" ] && ! command -v Xvfb >/dev/null 2>&1; then
+    # Case 3: In proot-distro, Xvfb may fail. Try it, but don't crash.
+    if [ "$DISTRO_ENV" = "proot-distro" ] && ! command -v Xvfb >/dev/null 2>&1; then
         warn "Xvfb not available in proot-distro"
         warn "Continuing with headless mode (screenshots via Python only)"
+        return 0
+    fi
+
+    # Case 4: Termux with no Termux:X11 — headless
+    if [ "$DISTRO_ENV" = "termux" ] && [ -z "${DISPLAY:-}" ]; then
+        warn "Termux detected but no DISPLAY set"
+        warn "Install Termux:X11 and set DISPLAY=:0"
+        warn "Falling back to headless mode"
         return 0
     fi
 
@@ -90,6 +147,12 @@ ensure_xserver() {
 # ─── Window Manager ─────────────────────────────────────────────────────────
 
 ensure_wm() {
+    # On existing desktop, window manager is already running
+    if [ "$RUNTIME_ENV" = "existing-desktop" ]; then
+        log "On existing desktop — using native window manager"
+        return 0
+    fi
+
     if command -v fluxbox >/dev/null 2>&1; then
         if pgrep -f "fluxbox.*$DISPLAY" >/dev/null 2>&1; then
             log "Fluxbox already running"
@@ -114,8 +177,14 @@ ensure_wm() {
 # ─── VNC ────────────────────────────────────────────────────────────────────
 
 ensure_vnc() {
+    # On existing desktop, VNC is not needed
+    if [ "$RUNTIME_ENV" = "existing-desktop" ]; then
+        log "On existing desktop — VNC not needed"
+        return 0
+    fi
+
     # In Termux native, use Termux:X11 instead of x11vnc
-    if [ "$ENV_TYPE" = "termux" ]; then
+    if [ "$DISTRO_ENV" = "termux" ]; then
         log "Termux detected — use Termux:X11 app for display"
         log "  Install Termux:X11 from F-Droid, then:"
         log "  export DISPLAY=:0"
@@ -259,7 +328,8 @@ ensure_browser "$@"
 session_save
 
 echo ""
-echo "  Environment: $ENV_TYPE"
+echo "  Runtime:     $RUNTIME_ENV"
+echo "  Distro:      $DISTRO_ENV"
 echo "  DISPLAY:     ${DISPLAY}"
 echo "  VNC:         localhost:${VNC_PORT}"
 echo "  Browser:     ${BROWSER} (persistent — never killed)"
