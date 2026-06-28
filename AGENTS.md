@@ -318,6 +318,50 @@ asyncio.run(main())
 
 ---
 
+## Free Residential Proxy System
+
+> **Read and copy from:** https://github.com/adittaya/scraperapi-playwright-guide
+>
+> That repository has **fully working, tested Playwright proxy configurations**
+> for three free/paid residential proxy providers. This is the reference
+> implementation — copy the code examples directly.
+
+### What's in the Guide
+
+| Provider | Type | Auto-rotate | Residential IPs | Playwright Support |
+|---|---|---|---|---|
+| **ScraperAPI** | Gateway (`:8001`) | ✅ | ✅ (`premium=true`) | ✅ Tested |
+| **ProxyScrape** | Gateway (`rp.scrapegw.com:6060`) | ✅ | ✅ | ✅ Tested |
+| **ScrapeOps** | Gateway (`residential-proxy.scrapeops.io:8181`) | ✅ | ✅ | ✅ Tested |
+
+### Quick Copy: ScraperAPI Residential with Playwright
+
+```python
+browser = await p.chromium.launch(
+    proxy={"server": "http://proxy-server.scraperapi.com:8001"}
+)
+context = await browser.new_context(
+    ignore_https_errors=True,  # REQUIRED
+    http_credentials={
+        "username": "scraperapi.premium=true.country_code=in",
+        "password": "YOUR_API_KEY",  # all lowercase
+    }
+)
+```
+
+### Key Lessons (from real testing)
+
+- `ignore_https_errors=True` is **required** — ScraperAPI uses a custom CA
+- Parameters in username use **dot separator**: `scraperapi.premium=true.country_code=in`
+- API key goes in **password**, `scraperapi[.params]` goes in **username**
+- `http_credentials` goes in `new_context()`, **not** in `launch(proxy=...)`
+- Start testing with `https://httpbin.org/ip` before hitting the target URL
+
+> For the full guide with all providers, error handling, retry logic, country targeting,
+> and sticky sessions — **go to https://github.com/adittaya/scraperapi-playwright-guide**
+
+---
+
 ## Linux Desktop Engine (Native X11)
 
 > **When to use:** Reading the screen of native Linux apps (not web pages).
