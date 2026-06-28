@@ -1,0 +1,99 @@
+{
+  "name": "browser-automation",
+  "description": "Enterprise grade browser environment with Xvfb, VNC, fluxbox window manager, screenshot analysis, and human-like browsing interaction for AI agents.",
+  "version": "1.0.0",
+  "author": "https://github.com/adittaya",
+  "repository": "https://github.com/adittaya/browsing-skill",
+
+  "skill": {
+    "setup": {
+      "install": "bash setup/install.sh",
+      "start": "bash setup/start.sh [url]",
+      "stop": "bash setup/stop.sh",
+      "status": "bash scripts/status.sh"
+    },
+
+    "commands": {
+      "navigate": {
+        "description": "Open a URL in the browser",
+        "command": "bash scripts/browser.sh open <url>"
+      },
+      "refresh": {
+        "description": "Refresh the current page",
+        "command": "bash scripts/browser.sh refresh"
+      },
+      "back": {
+        "description": "Go back in browser history",
+        "command": "bash scripts/browser.sh back"
+      },
+
+      "click": {
+        "description": "Click at coordinates or find and click an element",
+        "examples": [
+          "bash scripts/click.sh 640 480",
+          "bash scripts/click.sh --text continue",
+          "bash scripts/click.sh --text 'CONTINUE →'",
+          "bash scripts/click.sh --element modal"
+        ]
+      },
+      "click-text": {
+        "description": "Find a button by text hint and click it",
+        "command": "bash scripts/click.sh --text <hint>"
+      },
+
+      "scroll": {
+        "description": "Scroll the page",
+        "examples": [
+          "bash scripts/scroll.sh down 5",
+          "bash scripts/scroll.sh up 3",
+          "bash scripts/scroll.sh bottom",
+          "bash scripts/scroll.sh top"
+        ]
+      },
+
+      "type": {
+        "description": "Type text or press keys",
+        "examples": [
+          "bash scripts/type.sh 'Hello World'",
+          "bash scripts/type.sh --key Return",
+          "bash scripts/type.sh --key 'ctrl+a'"
+        ]
+      },
+
+      "screenshot": {
+        "description": "Take screenshot and optionally analyze",
+        "examples": [
+          "bash scripts/screenshot.sh",
+          "bash scripts/screenshot.sh /tmp/screen.png --analyze",
+          "bash scripts/screenshot.sh /tmp/screen.png --json"
+        ]
+      },
+
+      "analyze": {
+        "description": "Analyze the current screen for UI elements",
+        "command": "python3 lib/screen_analyzer.py --capture"
+      },
+
+      "locate": {
+        "description": "Find a UI element on screen",
+        "command": "python3 lib/element_locator.py --find <hint>"
+      }
+    },
+
+    "environment": {
+      "display": ":99",
+      "vnc_port": 5900,
+      "screen_size": "1280x720x24",
+      "browser": "surf",
+      "data_dir": "/tmp/browsing-skill"
+    },
+
+    "dependencies": [
+      "xvfb", "x11vnc", "fluxbox", "xdotool", "wmctrl",
+      "python3", "python3-pil", "imagemagick",
+      "surf (or qutebrowser/links2 as fallback)"
+    ],
+
+    "tags": ["browser", "automation", "vnc", "screenshot", "ui-testing", "web-scraping"]
+  }
+}
